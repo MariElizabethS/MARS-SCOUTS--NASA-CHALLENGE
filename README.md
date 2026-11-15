@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://mars-scouts-nasa-challenge.vercel.app/"><strong>🚀 Abrir la demo</strong></a>
+  <a href="https://mars-scouts-nasa-challenge.vercel.app/"><strong>Abrir la demo</strong></a>
   &nbsp; · &nbsp;
   <a href="#inicio-rápido">Ejecutar en tu equipo</a>
   &nbsp; · &nbsp;
@@ -133,6 +133,7 @@ La interfaz está en **inglés**. Conservamos aquí los nombres de sus controles
 | **Return preview** | Comparar el regreso inmediato con unos minutos más de exploración, sin modificar la misión. |
 | **Terrain / Elevation** | Cambiar la vista del mapa y explorar el relieve, las capas y el zoom. |
 | **Sound and voice** | Activar o silenciar las indicaciones y los tonos de alerta. |
+| **Find a safer route** | Desde una advertencia, pausar y comparar rutas que eviten los círculos de peligro. Cada opción indica si debe omitir alguna parada. |
 | **Simulate leaving the route** | Probar un desvío y observar la búsqueda de una alternativa o la solicitud de retorno. |
 | **Team** | Crear y cambiar perfiles locales de astronautas. |
 

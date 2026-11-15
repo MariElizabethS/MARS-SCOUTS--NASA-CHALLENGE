@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {routeOptions} from '../route-planner.mjs';
-import {calculate,evaluatePath,sectors} from '../engine.mjs';
+import {calculate,evaluatePath,sectors,nodeById,shortestPath} from '../engine.mjs';
+import {hazards,segmentIntersectsHazard} from '../safety.mjs';
 import {returnEcho} from '../echo.mjs';
 
 test('three distinct colored corridor plans include the stops and recommend the fastest',()=>{
@@ -59,4 +60,46 @@ test('return preview follows the chosen outbound corridor while preserving live 
   assert.deepEqual(preview.now.path,['base']);
   assert.equal(preview.anchor.from,'base');assert.equal(preview.anchor.to,'south');
   assert.equal(JSON.stringify(options),before);
+});
+
+test('hazard avoidance rejects a crossing even when both endpoint nodes are outside the circle',()=>{
+  const zone=hazards.find(zone=>zone.id==='steep-slope');
+  for(const id of ['crossing','skinner'])assert.ok(Math.hypot(nodeById(id).x-zone.x,nodeById(id).y-zone.y)*10>zone.radiusM);
+  assert.equal(segmentIntersectsHazard(nodeById('crossing'),nodeById('skinner'),zone),true);
+  assert.equal(shortestPath('wildcat','skinner',{avoidZones:[zone]}).time,Infinity);
+  assert.equal(evaluatePath(calculate().path,{avoidZones:[zone]}),null);
+});
+
+test('safer plans retain accessible observations and explicitly name the stop they must omit',()=>{
+  for(const sector of ['jezero','gale']){
+    const routes=routeOptions({sector,avoidedHazards:hazards.map(zone=>zone.id)});
+    assert.ok(routes.length>0);
+    for(const route of routes){
+      assert.deepEqual(route.stops,['wildcat']);
+      assert.match(route.scope,new RegExp(sectors[sector].stops.skinner.name));
+      assert.match(route.scope,/Not included in this safer plan/);
+      for(let i=1;i<route.path.length;i++)for(const zone of hazards)assert.equal(segmentIntersectsHazard(nodeById(route.path[i-1]),nodeById(route.path[i]),zone),false);
+      const selected=calculate({sector,selected:route.stops,preferredPath:route.path,avoidedHazards:hazards.map(zone=>zone.id)});
+      assert.deepEqual(selected.path,route.path);assert.ok(selected.viable);assert.ok(selected.reserve>=20);
+    }
+  }
+});
+
+test('mid-corridor avoidance can retreat from the actual position without crossing the danger ahead',()=>{
+  const anchor={from:'crossing',to:'skinner',fraction:.05};
+  const routes=routeOptions({current:'crew',anchor,selected:['skinner'],avoidedHazards:['steep-slope']});
+  assert.ok(routes.length>0);
+  for(const route of routes){
+    assert.equal(route.path[0],'crew');assert.equal(route.path[1],'crossing');
+    assert.equal(route.path.at(-1),'base');assert.ok(!route.stops.includes('skinner'));
+    for(let i=1;i<route.path.length;i++)assert.equal(segmentIntersectsHazard(nodeById(route.path[i-1],anchor),nodeById(route.path[i],anchor),hazards[1]),false);
+  }
+  assert.deepEqual(routeOptions({current:'crew',anchor:{...anchor,fraction:.25},avoidedHazards:['steep-slope']}),[]);
+  assert.deepEqual(routeOptions({budget:5,avoidedHazards:['steep-slope']}),[]);
+});
+
+test('return preview respects the same excluded danger zones as the selected route',()=>{
+  const options={current:'crossing',selected:[],avoidedHazards:['steep-slope']};
+  const preview=returnEcho(options,3);
+  for(const plan of [preview.now,preview.later])for(let i=1;i<plan.path.length;i++)assert.equal(segmentIntersectsHazard(nodeById(plan.path[i-1],preview.anchor),nodeById(plan.path[i],preview.anchor),hazards[1]),false);
 });

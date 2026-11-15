@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {proximityAlerts,NoticeGate,operationalMobility,hazards} from '../safety.mjs';
+import {proximityAlerts,NoticeGate,operationalMobility,hazards,hazardsFor} from '../safety.mjs';
 import {calculate,anchorNode,nodeById,shortestPath,edgeDistance,edgeCost} from '../engine.mjs';
 
 test('a proximity alert starts before entering the caution area',()=>{
@@ -53,4 +53,11 @@ test('a pause mid-edge recalculates from the actual position, including partial 
 test('an invalid anchor cannot invent a corridor through unmapped terrain',()=>{
   assert.equal(anchorNode({from:'base',to:'skinner',fraction:.5}),null);
   assert.equal(shortestPath('crew','base',{anchor:{from:'base',to:'skinner',fraction:.5}}).time,Infinity);
+});
+
+test('every hazard explains the terrain risk, including a temporary ridge closure',()=>{
+  for(const zone of hazardsFor({sector:'gale',event:true}))assert.ok(zone.name&&zone.description.length>30);
+  assert.match(hazards[0].description,/loose rocks/i);
+  assert.match(hazards[1].description,/slipping/i);
+  assert.match(hazardsFor({sector:'gale',event:true}).at(-1).description,/closed/i);
 });

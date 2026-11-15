@@ -1,5 +1,5 @@
 import {sectors,nodes,edges,nodeById,edgeDistance,edgeCost,calculate} from './engine.mjs';
-import {hazards,ProximityMonitor,NoticeGate,operationalMobility} from './safety.mjs';
+import {hazardsFor,ProximityMonitor,NoticeGate,operationalMobility} from './safety.mjs';
 import {initialPhysiology,advancePhysiology} from './physiology.mjs';
 import {createHistoryPdf} from './history-pdf.mjs';
 import {PLAYBACK,playbackMinutes,shouldPrepareTurn} from './playback.mjs';
@@ -21,6 +21,7 @@ state.traveledM=0;state.track=[[150,577.5]];state.nearHazard=false;state.speakin
 state.echoEnabled=false;state.echoHorizon=5;
 state.chosenRoute=null;state.routeChoices=[];state.routeDecisions=[];state.restFeedback=null;
 state.extraLoadKg=0;state.loadReview=null;state.deviation=null;state.rerouteNotice=null;state.navigationDemo=null;state.offRoutePosition=null;
+state.avoidedHazards=[];
 const emptyMission=JSON.parse(JSON.stringify(state));
 let profiles=[],activeCode='EVA-01',routeDrafts=[],lastSavedAt=-Infinity;
 let storage;try{storage=window.localStorage;}catch{storage=null;}
@@ -51,7 +52,7 @@ function update(){
   $('#destination-name').textContent=sector.name;$('#destination-coords').textContent=sector.coordinates;$('#mission-name').textContent=sector.mission;$('#map-title').textContent=sector.title;$('#map-location-label').textContent=sector.region;
   $('#event-label').textContent=state.event?'See how my route changed':state.sector==='jezero'?'Walk more slowly':'Avoid the ridge';
   $('#event-help').textContent=state.event?'Compare the previous route with the new proposal.':state.sector==='jezero'?'Calculate the return at a slower walking pace.':'Close ridge access and find another way back.';
-  $('#conditions-status').textContent=state.event||state.dust||state.extraLoadKg>0?'Adjusted route':'Normal route';
+  $('#conditions-status').textContent=state.event||state.dust||state.extraLoadKg>0||state.avoidedHazards.length?'Adjusted route':'Normal route';
   $('#conditions-help').textContent=state.proposal?'The walk is paused. Review the proposal in “Return and alerts” and accept it to continue.':'If you need a slower pace or visibility is poor, adjust an option. The walk will pause so you can review the new route before continuing.';
   $('#visibility-label').textContent=state.dust?'Visibility has improved':'Visibility is poor';
   $('#visibility-help').textContent=state.dust?'Reassess observations with normal visibility.':'Exclude observations that require a clear distant view.';
@@ -80,6 +81,7 @@ function update(){
   renderHealth();renderWalkStatus();renderDemoStatus();syncVoice();renderItinerary();renderMap();renderElevation();renderEcho(true);
 }
 function copilotMessage(){
+  if(state.avoidedHazards.length&&state.proposal)return result.viable?'Hazardous areas are excluded from the new plan. Compare the safer routes and check which observations remain available before continuing.':'No safe mapped return fits the current hazard restrictions and time. The walk stays paused. Review the stops or mission time.';
   if(!result.viable)return 'No viable return is possible with the current time and margin. The walk is paused. Adjust the available time or stops before continuing.';
   if(state.finished)return `Walk completed. Total time: ${Math.round(state.elapsed)} min. Remaining margin: ${Math.round(state.budget-state.elapsed)} min. Walk decisions are saved in the history.`;
   if(state.decision==='rejected')return 'The change has not been applied. Adjust the stops or available time to prepare another route. The walk remains paused.';
@@ -153,16 +155,26 @@ function speakMessage(message,{automatic=false}={}){
   utterance.onerror=e=>{if(sequence!==speechSequence)return;state.speaking=false;state.automaticVoice=false;if(e.error==='canceled'||e.error==='interrupted')return;state.voiceMessage='Voice playback failed. Read the instruction on screen.';syncVoice();};
   try{window.speechSynthesis.speak(utterance);}catch{state.speaking=false;state.voiceMessage='Voice could not start. Read the alert on screen.';syncVoice();}
 }
-function announce({key,title,message,critical=false}){
+function announce({key,title,message,critical=false,zoneId=null}){
   if(!notices.take(key))return;
-  state.activeNotice={title,message,critical};
+  state.activeNotice={title,message,critical,zoneId};
   $('#risk-title').textContent=title;$('#risk-message').textContent=message;
   $('#risk-alert').hidden=false;$('#risk-alert').classList.toggle('critical',critical);
+  $('#risk-route-button').hidden=!zoneId||state.avoidedHazards.includes(zoneId)||Boolean(state.offRoutePosition);
   clearTimeout(riskTimer);
   if(!critical)riskTimer=setTimeout(()=>{$('#risk-alert').hidden=true;},14000);
   record(title,message);soundAlarm(critical);speakMessage(message,{automatic:true});
 }
-function activeHazards(){return state.event&&state.sector==='gale'?[...hazards,{id:'closed-ridge',name:'closed ridge access',x:79,y:23,radiusM:45,warningM:180,kind:'exclusion'}]:hazards;}
+function activeHazards(){return hazardsFor(state);}
+function showSaferRoutes(){
+  const zone=activeHazards().find(hazard=>hazard.id===state.activeNotice?.zoneId);
+  if(!zone||state.offRoutePosition||state.finished)return;
+  freezePosition();
+  state.avoidedHazards=[...new Set([...state.avoidedHazards,...activeHazards().map(hazard=>hazard.id)])];
+  state.chosenRoute=null;state.routeChoices=[];state.revision++;state.proposal=true;state.decision=null;
+  record('Hazard avoidance requested',zone.name+'. '+zone.description+' Replanning from the actual position, avoiding all marked danger zones.');
+  showRoutes();
+}
 function monitorProximity(){
   const pos=state.offRoutePosition?[state.offRoutePosition.x*10,state.offRoutePosition.y*7.5]:state.progress?.position||xy(state.current),{active,events}=proximityMonitor.update({x:pos[0]/10,y:pos[1]/7.5},activeHazards());
   state.nearHazard=active.length>0;
@@ -174,8 +186,9 @@ function monitorProximity(){
   if(active.some(zone=>zone.critical))pause();
   for(const zone of events.slice(0,1)){
     if(zone.critical)pause();
-    const message=zone.critical?'Restricted access. The walk is paused. Review the route before continuing.':zone.phase==='inside'?`Caution area. Walk slowly and stay in the marked corridor.`:`In about ${zone.distanceM} meters: ${zone.name}. Slow down and follow the marked route.`;
-    announce({key:zone.key,title:zone.critical?'Restricted access':zone.phase==='inside'?'Caution area':'Nearby hazard',message,critical:zone.critical});
+    const avoiding=state.avoidedHazards.includes(zone.id);
+    const message=(zone.phase==='inside'?'You are inside this area. ':`In about ${zone.distanceM} meters: `)+zone.name+'. '+zone.description+' '+(zone.critical?'The walk is paused. ':'')+(avoiding?'This area is excluded from your plan. Follow the marked route.':state.offRoutePosition?'Return to the mapped route before planning a detour.':'Select “Find a safer route” to pause and compare plans outside the danger zones.');
+    announce({key:zone.key,title:(zone.critical?'Restricted area · ':zone.phase==='inside'?'Caution area · ':'Nearby hazard · ')+zone.name,message,critical:zone.critical,zoneId:zone.id});
     if(zone.critical)break;
   }
 }
@@ -208,7 +221,7 @@ function renderMap(){
   const s=sectors[state.sector], svg=$('#map-svg'),width=$('#map-viewport').clientWidth||800,compact=width<600,labelFont=Math.max(19,15*1000/width),hitRadius=Math.max(26,22*1000/width);
   let out=`<defs><pattern id="grid" width="100" height="75" patternUnits="userSpaceOnUse"><path d="M100 0H0V75" fill="none" stroke="#f0e4c7" stroke-opacity=".09" stroke-width="1"/></pattern><pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(35)"><path d="M0 0V10" stroke="#d4b38d" stroke-width="2" stroke-opacity=".35"/></pattern><filter id="shadow"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity=".8"/></filter></defs><rect width="1000" height="750" fill="url(#grid)"/>`;
   if(state.view==='contours')out+=`<g fill="none" stroke="#e9d6ae" stroke-opacity=".28" stroke-width="1">${contourPaths}</g>`;
-  if(state.layers.hazards)out+=activeHazards().map(zone=>`<g><ellipse cx="${zone.x*10}" cy="${zone.y*7.5}" rx="${zone.radiusM}" ry="${zone.radiusM*.75}" fill="${zone.kind==='caution'?'#d5b47744':'url(#hatch)'}" stroke="#d7b36e" stroke-width="2.5"/><text x="${zone.x*10}" y="${zone.y*7.5+9}" text-anchor="middle" font-size="${labelFont*1.3}" font-family="Arial" font-weight="bold" fill="#e8d5b0" stroke="#543d26" stroke-width="1">!</text><text x="${zone.x*10}" y="${zone.y*7.5+zone.radiusM*.75+labelFont+5}" text-anchor="middle" font-size="${labelFont*.8}" fill="#fff3d7" stroke="#312b2c" stroke-width="5" paint-order="stroke">${zone.kind==='caution'?'Slope · caution':'Restricted access'}</text></g>`).join('');
+  if(state.layers.hazards)out+=activeHazards().map(zone=>`<g><title>${escapeHTML(zone.name+': '+zone.description)}</title><ellipse cx="${zone.x*10}" cy="${zone.y*7.5}" rx="${zone.radiusM}" ry="${zone.radiusM*.75}" fill="${zone.kind==='caution'?'#d5b47744':'url(#hatch)'}" stroke="#d7b36e" stroke-width="2.5"/><text x="${zone.x*10}" y="${zone.y*7.5+9}" text-anchor="middle" font-size="${labelFont*1.3}" font-family="Arial" font-weight="bold" fill="#e8d5b0" stroke="#543d26" stroke-width="1">!</text><text x="${zone.x*10}" y="${zone.y*7.5+zone.radiusM*.75+labelFont+5}" text-anchor="middle" font-size="${labelFont*.8}" fill="#fff3d7" stroke="#312b2c" stroke-width="5" paint-order="stroke">${escapeHTML(zone.name)} · ${zone.kind==='caution'?'caution':'no entry'}</text></g>`).join('');
   if(state.layers.corridors)out+=`<g stroke="#c8c8aa" stroke-opacity=".34" stroke-width="1.5" stroke-dasharray="5 7">${edges.map(([a,b])=>`<path d="M${xy(a)} ${xy(b)}"/>`).join('')}</g>`;
   if(state.layers.reach)out+=`<g stroke="#b2bca6" stroke-opacity=".20" stroke-width="27" stroke-linecap="round">${result.reachableEdges.map(([a,b])=>`<path d="M${xy(a)} ${xy(b)}"/>`).join('')}</g>`;
   if(state.event){const original=calculate({sector:state.sector,selected:state.selected,extraLoadKg:state.extraLoadKg});out+=`<polyline points="${pointString(original.path)}" fill="none" stroke="#d7c3a0" stroke-width="2" stroke-dasharray="5 8" opacity=".35"/>`;}
@@ -222,7 +235,7 @@ function renderMap(){
     if(isBase){out+=`<rect x="-15" y="-15" width="30" height="30" rx="7" fill="#243027" stroke="#c4d0ad" stroke-width="1.5"/><path d="m-7 1 7-7 7 7v7H-7V1Zm5 7V2h4v6" fill="none" stroke="#e1e8cc" stroke-width="1.5"/>`;}
     else if(science){out+=`<circle class="node-core" r="${active?11:8}" fill="${active?'var(--route-color)':'#303c2b'}" stroke="${color}" stroke-width="2"/><circle r="3" fill="${active?'#513426':color}"/>`;}
     else out+=`<circle class="node-core" r="4" fill="#4e5941" stroke="${color}" stroke-width="1.5"/>`;
-    if(state.layers.labels&&name){const isLookout=n.id==='lookout',isRight=n.id==='skinner',labelX=isRight?-22:22,labelY=isLookout?labelFont+20:-22,shortName=isBase?'Ares Base':isLookout?'Lookout':n.id==='wildcat'?'Stop 1':'Stop 2';out+=`<g filter="url(#shadow)"><text x="${labelX}" y="${labelY}" text-anchor="${isRight?'end':'start'}" fill="#fff7eb" font-family="Arial,sans-serif" font-size="${labelFont}" font-weight="600">${compact?shortName:name}</text>${compact?'':`<text x="${labelX}" y="${labelY+24}" text-anchor="${isRight?'end':'start'}" fill="${color}" font-family="Arial,sans-serif" font-size="${labelFont*.7}">${isBase?'Departure and return':blocked?'Access closed':isLookout?'View needs validation':n.id==='wildcat'?'First observation':'Second observation'}</text>`}</g>`;}
+    if(state.layers.labels&&name){const isLookout=n.id==='lookout',isRight=n.id==='skinner',labelX=isRight?-22:22,labelY=isLookout?labelFont+20:-22;out+=`<g filter="url(#shadow)"><text x="${labelX}" y="${labelY}" text-anchor="${isRight?'end':'start'}" fill="#fff7eb" font-family="Arial,sans-serif" font-size="${labelFont}" font-weight="600">${escapeHTML(name)}</text>${compact?'':`<text x="${labelX}" y="${labelY+24}" text-anchor="${isRight?'end':'start'}" fill="${color}" font-family="Arial,sans-serif" font-size="${labelFont*.7}">${isBase?'Departure and return':blocked?'Access closed':isLookout?'View needs validation':n.id==='wildcat'?'First observation':'Second observation'}</text>`}</g>`;}
     out+='</g>';
   }
   if(state.deviation?.sector===state.sector)out+='<polyline points="'+state.deviation.wrongTurn.map(point=>point.join(',')).join(' ')+'" fill="none" stroke="#ff9ab5" stroke-width="8" stroke-dasharray="7 5"><title>Simulated missed turn</title></polyline>';
@@ -243,7 +256,7 @@ function renderEcho(force=false){
   $('#map-viewport').classList.toggle('echo-open',state.echoEnabled);
   if(!state.echoEnabled){if($('#echo-layer'))$('#echo-layer').innerHTML='';return;}
   const clock=performance.now();if(!force&&clock-lastEchoAt<400)return;lastEchoAt=clock;
-  const forecast=returnEcho({sector:state.sector,event:state.event,dust:state.dust,budget:state.budget,minReserve:state.minReserve,elapsed:state.elapsed,current:state.current,anchor:state.anchor,progress:state.progress,completed:state.completed,extraLoadKg:state.extraLoadKg,preferredPath:state.chosenRoute?.path,selected:state.finished?[]:(state.approvedStops??state.selected).filter(id=>!state.completed.includes(id)),mobility:operationalMobility(state.health)},state.echoHorizon);
+  const forecast=returnEcho({sector:state.sector,event:state.event,dust:state.dust,budget:state.budget,minReserve:state.minReserve,elapsed:state.elapsed,current:state.current,anchor:state.anchor,progress:state.progress,completed:state.completed,extraLoadKg:state.extraLoadKg,avoidedHazards:state.avoidedHazards,preferredPath:state.chosenRoute?.path,selected:state.finished?[]:(state.approvedStops??state.selected).filter(id=>!state.completed.includes(id)),mobility:operationalMobility(state.health)},state.echoHorizon);
   $('#echo-horizon').textContent=`${state.echoHorizon} min`;
   $('#echo-now-time').textContent=fmt(forecast.now.time)+' to base';
   $('#echo-later-time').textContent=fmt(forecast.later.time)+' to base';
@@ -338,7 +351,7 @@ function initializeProfiles(){
   for(const profile of profiles){
     const mission=profile.mission;
     if(!mission||!sectors[mission.sector]||!Array.isArray(mission.selected)||!mission.selected.every(id=>sectors[mission.sector].stops[id])||!Array.isArray(mission.logs)||!Array.isArray(mission.track)||!Number.isFinite(mission.elapsed)||mission.elapsed<0||!Number.isFinite(mission.budget)||!nodeById(mission.current,mission.anchor))profile.mission=freshMission();
-    else {profile.mission={...freshMission(),...mission,extraLoadKg:carriedLoad(mission.extraLoadKg).kg,minReserve:20,running:false,speaking:false,automaticVoice:false,nearHazard:false,activeNotice:null};}
+    else {profile.mission={...freshMission(),...mission,avoidedHazards:Array.isArray(mission.avoidedHazards)?mission.avoidedHazards.filter(id=>hazardsFor(mission).some(zone=>zone.id===id)):[],extraLoadKg:carriedLoad(mission.extraLoadKg).kg,minReserve:20,running:false,speaking:false,automaticVoice:false,nearHazard:false,activeNotice:null};}
   }
   state=activeProfile().mission;
 }
@@ -457,7 +470,7 @@ function simulateDeviation(){
   if(state.finished||state.navigationDemo||!state.chosenRoute||state.proposal||!result.viable)return;
   unlockSound();
   const resumeAfter=state.running,path=freezePosition(),before=getResult();
-  const planned=missedTurn({path,current:state.current,anchor:state.anchor,speed:before.speed,blocked:before.blocked,selected:state.approvedStops??before.stops,completed:state.completed,sector:state.sector});
+  const planned=missedTurn({path,current:state.current,anchor:state.anchor,speed:before.speed,blocked:before.blocked,avoidZones:before.avoidZones,selected:state.approvedStops??before.stops,completed:state.completed,sector:state.sector});
   if(!planned){notify('There is no mapped side corridor for this simulation at the current position.');return;}
   const originalPoints=path.map(id=>xy(id));
   state.navigationDemo={phase:planned.segments[0].phase,segments:planned.segments,index:0,fraction:0,branchIndex:planned.branchIndex,originalPath:[...path],originalRoute:JSON.parse(JSON.stringify(state.chosenRoute)),originalPoints,originalCurrent:state.current,originalAnchor:state.anchor?{...state.anchor}:null,offCorridor:planned.offCorridor||false,stops:[...(state.approvedStops??before.stops)],plannedAnchor:planned.anchor,resumeAfter,departedM:0,warned:false};
@@ -570,10 +583,12 @@ function routeMiniMap(route){
 function showRoutes(){
   freezePosition();update();
   routeDrafts=routeOptions(routeParameters());
-  if(!routeDrafts.length){openDialog(heading('ROUTE COMPARISON','No feasible route yet','Increase the available mission time or change your stops.')+'<div class="dialog-actions"><button class="primary-button" data-action="settings">Adjust mission time</button><button class="outline-button" data-action="destinations">Change stops</button></div>');return;}
-  openDialog(heading('CHOOSE YOUR ROUTE','One mission. Different ways there.','Recommended means the quickest feasible plan for the available stops, including the return. You choose the route.')+
+  const avoiding=state.avoidedHazards.length>0;
+  const safetyNote=avoiding?'<div class="route-safety-summary" role="status"><strong>Avoiding dangerous terrain</strong><p>'+activeHazards().filter(zone=>state.avoidedHazards.includes(zone.id)).map(zone=>escapeHTML(zone.name+': '+zone.description)).join('<br>')+'</p><p>Every option stays outside these areas. Check the observations included before choosing.</p></div>':'';
+  if(!routeDrafts.length){openDialog(heading('ROUTE COMPARISON',avoiding?'No safe route available':'No feasible route yet',avoiding?'No mapped route avoids the danger zones within the available time. The walk stays paused. Review your mission time or stops.':'Increase the available mission time or change your stops.')+safetyNote+'<div class="dialog-actions"><button class="primary-button" data-action="settings">Adjust mission time</button><button class="outline-button" data-action="destinations">Change stops</button></div>');return;}
+  openDialog(heading('CHOOSE YOUR ROUTE',avoiding?'Choose a route outside the danger zones':'One mission. Different ways there.','Recommended means the quickest feasible plan for the available stops, including the return. You choose the route.')+safetyNote+
     '<p class="route-scope">'+state.extraLoadKg+' kg extra equipment · '+escapeHTML(routeDrafts[0].scope)+'</p><div class="route-options">'+routeDrafts.map((route,index)=>
-      '<article class="route-option" style="--option-color:'+route.color+'"><div class="route-option-heading"><span>ROUTE '+(index+1)+'</span>'+(route.recommended?'<b>Recommended</b>':'')+'</div>'+routeMiniMap(route)+'<h3>'+route.name+'</h3><p class="route-metrics">'+Math.round(route.time)+' min <span>·</span> '+(route.distance/1000).toFixed(2)+' km <span>·</span> '+Math.round(route.ascent)+' m climb</p><p>'+route.reason+'</p><details><summary>What is along the way?</summary><p>'+route.encounterText+'</p><p>'+route.stops.map(id=>sectors[state.sector].stops[id].method).join(' · ')+'</p></details><button class="primary-button" data-action="choose-route" data-route="'+index+'">Choose route '+(index+1)+'</button></article>').join('')+'</div><p class="dialog-tip">Colored previews show different corridors in this scenario. Terrain and travel times are simulated. Fewer alternatives may be available under current conditions.</p>',true);
+      '<article class="route-option" style="--option-color:'+route.color+'"><div class="route-option-heading"><span>ROUTE '+(index+1)+'</span>'+(route.recommended?'<b>Recommended</b>':'')+'</div>'+routeMiniMap(route)+'<h3>'+route.name+'</h3><p class="route-metrics">'+Math.round(route.time)+' min <span>·</span> '+(route.distance/1000).toFixed(2)+' km <span>·</span> '+Math.round(route.ascent)+' m climb</p><p>'+route.reason+'</p>'+(avoiding?'<p class="route-avoidance-note">'+escapeHTML(route.scope)+'</p>':'')+'<details><summary>What is along the way?</summary><p>'+route.encounterText+'</p><p>'+route.stops.map(id=>sectors[state.sector].stops[id].method).join(' · ')+'</p></details><button class="primary-button" data-action="choose-route" data-route="'+index+'">Choose route '+(index+1)+'</button></article>').join('')+'</div><p class="dialog-tip">Colored previews show different corridors in this scenario. Terrain and travel times are simulated. Fewer alternatives may be available under current conditions.</p>',true);
 }
 function chooseRoute(index){
   const route=routeDrafts[index];if(!route)return;
@@ -583,6 +598,7 @@ function chooseRoute(index){
   state.proposal=false;state.decision='accepted';state.revision++;
   state.routeDecisions.push({time:new Date().toISOString(),sector:state.sector,chosenId:route.id,options:JSON.parse(JSON.stringify(routeDrafts))});
   record('Route selected',route.name+'. '+route.reason+' Along the way: '+route.encounterText);
+  if(state.avoidedHazards.length){record('Hazard avoidance route selected',route.scope);state.activeNotice=null;clearTimeout(riskTimer);$('#risk-alert').hidden=true;}
   $('#main-dialog').close();update();notify('Route selected. '+(state.elapsed?'Continue':'Start')+' when ready.');
 }
 function renderRouteSummary(){
@@ -656,7 +672,7 @@ function capturePosition(){
 function invalidate(){state.navigationDemo=null;state.rerouteNotice=null;capturePosition();state.chosenRoute=null;state.routeChoices=[];state.revision++;state.decision=null;state.proposal=state.extraLoadKg>0||state.event||state.health.profile==='reduced'||state.health.stale||state.elapsed>0||state.dust;state.progress=null;state.approvedStops=null;state.finished=false;}
 function inject(){if(state.event){compare();return;}pause();state.event=true;invalidate();record('Walking conditions adjusted',state.sector==='jezero'?'Reduced operating profile: 45 → 14 m/min. Source: mission controls.':'Ridge access closed. Source: mission controls.');update();record('New proposal calculated',`Reserve ${fmt(result.reserve)}. ${result.alternative?'Candidate lookout; science objective pending.':'Return calculated.'} Requires confirmation.`);notify('Condition updated. Review the route from your current position.');}
 function pause(){clearInterval(timer);state.running=false;persistMission();}
-function reset(sector=state.sector){pause();clearTimeout(riskTimer);state.traveledM=0;state.track=[[150,577.5]];state.nearHazard=false;state.speaking=false;$('#navigation-cue').hidden=true;Object.assign(state,{sector,event:false,dust:false,current:'base',elapsed:0,completed:[],finished:false,running:false,proposal:false,decision:null,selected:['wildcat','skinner'],approvedStops:null,progress:null,anchor:null,chosenRoute:null,routeChoices:[],restFeedback:null,deviation:null,rerouteNotice:null,navigationDemo:null,offRoutePosition:null,loadReview:null,health:{profile:'nominal',stale:false},physiology:initialPhysiology(),activeNotice:null,automaticVoice:false,zoom:1,pan:{x:0,y:0}});state.revision++;notices.reset();proximityMonitor.reset();if('speechSynthesis'in window){speechSequence++;window.speechSynthesis.cancel();}$('#risk-alert').hidden=true;applyTransform();drawTerrain();$('#main-dialog').close();$('#map-tooltip').hidden=true;update();record('Walk prepared',`Area ${sectors[sector].name}. Time budget ${state.budget} min, reserve ${state.minReserve} min.`);}
+function reset(sector=state.sector){pause();clearTimeout(riskTimer);state.traveledM=0;state.track=[[150,577.5]];state.nearHazard=false;state.speaking=false;$('#navigation-cue').hidden=true;Object.assign(state,{sector,event:false,dust:false,current:'base',elapsed:0,completed:[],finished:false,running:false,proposal:false,decision:null,selected:['wildcat','skinner'],approvedStops:null,progress:null,anchor:null,chosenRoute:null,routeChoices:[],restFeedback:null,deviation:null,rerouteNotice:null,navigationDemo:null,offRoutePosition:null,loadReview:null,avoidedHazards:[],health:{profile:'nominal',stale:false},physiology:initialPhysiology(),activeNotice:null,automaticVoice:false,zoom:1,pan:{x:0,y:0}});state.revision++;notices.reset();proximityMonitor.reset();if('speechSynthesis'in window){speechSequence++;window.speechSynthesis.cancel();}$('#risk-alert').hidden=true;applyTransform();drawTerrain();$('#main-dialog').close();$('#map-tooltip').hidden=true;update();record('Walk prepared',`Area ${sectors[sector].name}. Time budget ${state.budget} min, reserve ${state.minReserve} min.`);}
 function toggleWalk(){
   if(state.navigationDemo){
     if(state.navigationDemo.phase==='awaiting-return')returnToRoute();
@@ -752,6 +768,7 @@ function applyWellbeing(profile){
 }
 
 const actions={
+  'avoid-hazards':showSaferRoutes,
   load:showLoadReport,'simulate-deviation':simulateDeviation,'return-to-route':returnToRoute,
   'dismiss-deviation':()=>{if(state.navigationDemo)return;state.rerouteNotice=null;renderRerouteNotice();persistMission();},
   profiles:showProfiles,'select-profile':button=>switchProfile(button.dataset.code),

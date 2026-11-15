@@ -82,6 +82,12 @@ Voice provides guidance on departure and before a junction or stop. Hazards take
 
 Monitoring continues when the hazards layer is hidden. The Gale closure adds the ridge perimeter to active hazards. Resting, changing visibility or recalculating a route does not itself trigger a hazard alarm. **Listen to explanation** remains available on request.
 
+Each proximity warning names the hazard and explains its terrain risk: loose ground and rocks, a steep slope with unstable footing, or a closed ridge passage. **Find a safer route** pauses at the actual position and opens route comparison with all marked danger zones excluded. Every segment is checked against the circular perimeter, including virtual segments at mid-corridor positions. Merely keeping both endpoint nodes outside the circle is insufficient.
+
+The comparison first tries to retain all requested observations, then reachable subsets, a lookout where available, or a direct return. Cards name any omitted stops. In the current graph, the slope circle intersects the only corridor into Skinner Ridge / Monte Grande ridge, so avoiding it makes that observation unavailable. If no mapped safe route fits the time buffer, the app explains this and stays paused. Avoidance persists with each astronaut's mission, applies to the return preview and navigation demo, and is cleared when restarting the scenario.
+
+Map labels retain the full observation names on compact screens instead of replacing them with “Stop 1” or “Stop 2”.
+
 Voice uses browser speech synthesis without a microphone or external model. Written alerts work when speech is unavailable. Proximity parameters are scenario rules, not validated EVA operating distances.
 
 ## Map and Mars Trek

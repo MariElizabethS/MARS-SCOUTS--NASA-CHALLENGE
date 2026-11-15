@@ -1,5 +1,5 @@
 import {nodeById,edges,edgeCost,edgeDistance,sectors} from './engine.mjs';
-import {proximityAlerts} from './safety.mjs';
+import {proximityAlerts,segmentIntersectsHazard} from './safety.mjs';
 import {routeOptions} from './route-planner.mjs';
 
 export function navigationSegment(from,to,{anchor=null,speed=45,endFraction=1,phase='approach'}={}){
@@ -22,7 +22,7 @@ export function segmentPosition(segment,fraction){
 
 // Prefer a mapped side corridor. Leaving unmapped ground is a separate demo state
 // that permits retracing only; it is never offered as a new navigable corridor.
-export function missedTurn({path,current='base',anchor=null,speed=45,blocked=[],selected=[],completed=[],sector='jezero'}={}){
+export function missedTurn({path,current='base',anchor=null,speed=45,blocked=[],selected=[],completed=[],sector='jezero',avoidZones=[]}={}){
   if(!Array.isArray(path)||path.length<2||path[0]!==current||!Number.isFinite(speed)||speed<=0)return null;
   for(let i=0;i<path.length-1;i++){
     const from=path[i];if(from==='crew')continue;
@@ -32,6 +32,7 @@ export function missedTurn({path,current='base',anchor=null,speed=45,blocked=[],
     // Favor a side corridor absent from the remaining selected route.
     neighbors.sort((a,b)=>Number(path.includes(a))-Number(path.includes(b)));
     for(const to of neighbors){
+      if(avoidZones.some(zone=>segmentIntersectsHazard(nodeById(from),nodeById(to),zone)))continue;
       const a=nodeById(from),b=nodeById(to),fraction=Math.min(.3,50/edgeDistance(from,to));
       const point={x:a.x+(b.x-a.x)*fraction,y:a.y+(b.y-a.y)*fraction};
       if(proximityAlerts(point).some(zone=>zone.critical))continue;
@@ -52,6 +53,7 @@ export function missedTurn({path,current='base',anchor=null,speed=45,blocked=[],
   for(const sign of [1,-1]){
     const end={x:a.x-(b.y-a.y)/length*5*sign,y:a.y+(b.x-a.x)/length*5*sign,z:a.z};
     if(end.x<0||end.x>100||end.y<0||end.y>100||proximityAlerts(end).some(zone=>zone.critical))continue;
+    if(avoidZones.some(zone=>segmentIntersectsHazard(a,end,zone)))continue;
     const segment={offCorridor:true,startPoint:{x:a.x,y:a.y,z:a.z},endPoint:end,distanceM:50,timeMin:50/speed,phase:'departing'};
     const track=[[a.x*10,a.y*7.5],[end.x*10,end.y*7.5]];
     return {offCorridor:true,current,anchor,track,segments:[segment],branchIndex:0,travelMin:segment.timeMin,activityMin:0,distanceM:50,visitedStops:[],wrongTurn:track};

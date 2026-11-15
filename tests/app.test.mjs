@@ -306,3 +306,49 @@ test('weather panel follows the selected Mars sector and marks its readings as s
   a.reset('gale');assert.match(a.element('#weather-temperature').textContent,/°C/);
   assert.notEqual(a.element('#weather-temperature').textContent,initial);
 });
+
+test('hazard warnings explain the danger and offer a route outside the marked areas from the actual position',async()=>{
+  const data=new Map(),storage={getItem:key=>data.get(key),setItem:(key,value)=>data.set(key,value)};
+  const a=await app({storage});a.startWalk();
+  for(let i=0;i<200&&!a.state.activeNotice?.zoneId;i++)a.advance(1000);
+  assert.equal(a.state.activeNotice.zoneId,'steep-slope');
+  assert.match(a.element('#risk-message').textContent,/steep incline|slipping/i);
+  assert.equal(a.element('#risk-route-button').hidden,false);
+  const distance=a.state.traveledM,elapsed=a.elapsedNow(),position=[...a.state.progress.position];
+  a.actions['avoid-hazards']();
+  assert.equal(a.state.running,false);assert.equal(a.state.proposal,true);
+  assert.equal(a.state.traveledM,distance);assert.ok(Math.abs(a.elapsedNow()-elapsed)<1e-8);
+  const point=engine.nodeById(a.state.current,a.state.anchor);
+  assert.ok(Math.abs(point.x*10-position[0])<1e-8&&Math.abs(point.y*7.5-position[1])<1e-8);
+  assert.match(a.element('#dialog-content').innerHTML,/Choose a route outside the danger zones/);
+  assert.match(a.element('#dialog-content').innerHTML,/Not included in this safer plan: Skinner Ridge/);
+  a.chooseRoute(0);assert.equal(a.state.proposal,false);
+  assert.ok(!a.state.chosenRoute.path.includes('skinner'));
+  for(let i=1;i<a.state.chosenRoute.path.length;i++)for(const zone of safety.hazards)assert.equal(safety.segmentIntersectsHazard(engine.nodeById(a.state.chosenRoute.path[i-1],a.state.anchor),engine.nodeById(a.state.chosenRoute.path[i],a.state.anchor),zone),false);
+  const restored=await app({storage});
+  assert.deepEqual([...restored.state.avoidedHazards],[...a.state.avoidedHazards]);
+  assert.equal(restored.state.running,false);assert.equal(restored.state.traveledM,distance);
+  restored.toggleWalk();restored.advance(2_000_000);assert.equal(restored.state.finished,true);
+  assert.ok(restored.state.logs.some(log=>log.title==='Hazard avoidance route selected'));
+  restored.reset();assert.equal(restored.state.avoidedHazards.length,0);
+});
+
+test('an unavailable safe route leaves the mission paused and explains that no route fits',async()=>{
+  const a=await app();a.startWalk();
+  for(let i=0;i<200&&!a.state.activeNotice?.zoneId;i++)a.advance(1000);
+  a.state.budget=5;a.actions['avoid-hazards']();
+  assert.equal(a.state.running,false);assert.equal(a.state.proposal,true);
+  assert.match(a.element('#dialog-content').innerHTML,/No safe route available/);
+  assert.equal(a.element('#start-button').disabled,true);
+  const distance=a.state.traveledM;a.toggleWalk();a.advance(10000);assert.equal(a.state.traveledM,distance);
+});
+
+test('small maps show the full names of every observation stop in both sectors',async()=>{
+  const a=await app();a.element('#map-viewport').clientWidth=360;
+  for(const sector of ['jezero','gale']){
+    a.reset(sector);
+    const map=a.element('#map-svg').innerHTML;
+    for(const stop of Object.values(engine.sectors[sector].stops))assert.ok(map.includes('>'+stop.name+'</text>'),stop.name);
+    assert.doesNotMatch(map,/>Stop [12]<|>Lookout</);
+  }
+});
