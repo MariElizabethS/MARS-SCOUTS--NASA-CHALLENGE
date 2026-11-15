@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="460" viewBox="0 0 1440 460" role="img" aria-labelledby="title desc">
+  <title id="title">Mars Scouts — Cada paso, un camino de regreso</title>
+  <desc id="desc">Portada del simulador de exploración marciana: planifica, explora y regresa. Un planeta y una ruta ilustrada acompañan la identidad del proyecto.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#110d1d"/><stop offset="1" stop-color="#261a33"/></linearGradient>
+    <radialGradient id="planet" cx="32%" cy="28%" r="80%"><stop stop-color="#efc39b"/><stop offset=".4" stop-color="#b7775e"/><stop offset=".8" stop-color="#5a3545"/><stop offset="1" stop-color="#241b35"/></radialGradient>
+    <linearGradient id="route" x2="1"><stop stop-color="#c9a5ff"/><stop offset="1" stop-color="#75dbc1"/></linearGradient>
+    <clipPath id="planet-clip"><circle cx="1180" cy="218" r="155"/></clipPath>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M48 0H0V48" fill="none" stroke="#d3baff" stroke-opacity=".06"/></pattern>
+  </defs>
+  <rect width="1440" height="460" rx="24" fill="url(#bg)"/>
+  <rect width="1440" height="460" rx="24" fill="url(#grid)"/>
+  <path d="M890 460c75-80 117-122 233-130s208 7 317-80v210" fill="#3c294c" opacity=".36"/>
+  <path d="M930 460c110-77 206-34 304-78s153-57 206-48" fill="none" stroke="#76547e" stroke-opacity=".3"/>
+  <g fill="#d7c4ef" opacity=".5"><circle cx="960" cy="60" r="2"/><circle cx="1364" cy="83" r="2"/><circle cx="1024" cy="362" r="2"/><circle cx="1314" cy="406" r="1.5"/><circle cx="1380" cy="266" r="1.5"/></g>
+  <ellipse cx="1180" cy="218" rx="208" ry="78" fill="none" stroke="#c4a0ef" stroke-opacity=".2" transform="rotate(-26 1180 218)"/>
+  <circle cx="1180" cy="218" r="155" fill="url(#planet)"/>
+  <g clip-path="url(#planet-clip)" fill="none" stroke="#f9dcc0" stroke-opacity=".15" stroke-width="2">
+    <path d="M1000 145c92-54 200 46 350-15M1000 173c106-50 211 44 350-12M1000 260c106-66 220 31 350-42M1000 284c135-77 227 23 350-38M1050 320c98-41 199 12 270-29"/>
+    <ellipse cx="1110" cy="190" rx="50" ry="28" transform="rotate(-20 1110 190)"/>
+    <ellipse cx="1232" cy="275" rx="65" ry="34" transform="rotate(-20 1232 275)"/>
+  </g>
+  <g font-family="Segoe UI,Arial,sans-serif">
+    <text x="72" y="77" fill="#b9a2d0" font-size="17" letter-spacing="4">SIMULADOR DE EXPLORACIÓN MARCIANA</text>
+    <g transform="translate(72 104)"><rect width="64" height="64" rx="17" fill="#c9a5ff" fill-opacity=".1"/><path d="M12 45 28 18l10 17 7-11 9 21" fill="none" stroke="#c9a5ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <text x="155" y="153" font-size="59" font-weight="750" letter-spacing="-2" fill="#f6f0ff">MARS<tspan fill="#c9a5ff">SCOUTS</tspan></text>
+    <text x="72" y="222" font-size="35" font-weight="600" fill="#f6f0ff">Cada paso, un camino de regreso.</text>
+    <text x="72" y="264" font-size="21" fill="#c5b5d7">Diseña tu ruta. Explora el terreno. Vuelve a la base.</text>
+    <g font-size="15" fill="#d9cae8">
+      <rect x="72" y="296" width="121" height="32" rx="16" fill="#382746" stroke="#644b7d"/><text x="132" y="317" text-anchor="middle">JEZERO + GALE</text>
+      <rect x="205" y="296" width="160" height="32" rx="16" fill="#382746" stroke="#644b7d"/><text x="285" y="317" text-anchor="middle">16 FOTOS REALES</text>
+      <rect x="377" y="296" width="138" height="32" rx="16" fill="#382746" stroke="#644b7d"/><text x="446" y="317" text-anchor="middle">REPORTES PDF</text>
+    </g>
+    <path d="M240 388H370M550 388H690" stroke="url(#route)" stroke-width="2"/>
+    <g fill="#171020" stroke-width="3"><circle cx="84" cy="388" r="7" stroke="#c9a5ff"/><circle cx="390" cy="388" r="7" stroke="#a2c2de"/><circle cx="710" cy="388" r="7" stroke="#75dbc1"/></g>
+    <g font-size="15" font-weight="600"><text x="102" y="394" fill="#c9a5ff">01 · PLANIFICA</text><text x="408" y="394" fill="#b8d3e7">02 · EXPLORA</text><text x="728" y="394" fill="#75dbc1">03 · REGRESA</text></g>
+  </g>
+</svg>
