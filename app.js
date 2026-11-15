@@ -597,7 +597,12 @@ function showRestFeedback(){
     '<div class="rest-stats"><div><strong>'+(feedback.distance/1000).toFixed(2)+' km</strong><span>Already traveled</span></div><div><strong>'+feedback.completed.length+'</strong><span>Observations completed</span></div><div><strong>'+fmt(feedback.returnTime)+'</strong><span>Direct return from here</span></div></div><div class="source-card"><h3>'+(feedback.completed.length?'What you have explored':'Your journey is underway')+'</h3><p>'+(feedback.completed.join(' · ')||'No observations completed yet. Your current position has been preserved.')+'</p><p>Two minutes have been added to mission time. Your next plan uses a reduced pace. Review it before continuing.</p></div><div class="dialog-actions"><button class="primary-button" data-action="routes">Compare routes from here</button><button class="outline-button" data-action="close-rest">Review return plan</button></div>');
 }
 function placeGallery(info){
-  return '<div class="place-gallery">'+(info.photos||[]).map(photo=>'<figure><img src="'+photo.src+'" alt="'+escapeHTML(photo.alt)+'" loading="lazy" width="1200" height="650"><figcaption>'+photo.caption+' <a href="'+photo.source+'" target="_blank" rel="noreferrer">'+photo.credit+' ↗</a></figcaption></figure>').join('')+'</div>';
+  return '<div class="place-gallery">'+(info.photos||[]).map(photo=>{
+    const panoramic=photo.width/photo.height>3;
+    return '<figure><div class="place-photo'+(panoramic?' place-photo-panorama':'')+'"'+(panoramic?' tabindex="0" role="region" aria-label="Panorama. Scroll horizontally to explore the landscape."':'')+'><img src="'+photo.src+'" alt="'+escapeHTML(photo.alt)+'" width="'+photo.width+'" height="'+photo.height+'"></div>'+
+      '<div class="place-photo-tools">'+(panoramic?'<span>Panorama · scroll sideways to explore</span>':'')+'<a href="'+photo.src+'" target="_blank" rel="noopener noreferrer">Open full image ↗</a></div>'+
+      '<figcaption>'+photo.caption+' <a href="'+photo.source+'" target="_blank" rel="noreferrer">'+photo.credit+' ↗</a></figcaption></figure>';
+  }).join('')+'</div>';
 }
 function teamReport(){
   return profiles.map(profile=>{

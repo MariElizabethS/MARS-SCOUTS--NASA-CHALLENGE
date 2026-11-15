@@ -21,6 +21,7 @@ function factsFor(sector,id){
 }
 
 const nasaCredit='NASA/JPL-Caltech/ASU/MSSS';
+const photoDimensions={jezero:[1200,689],wildcat:[3225,2631],skinner:[1200,666],gale:[1800,180]};
 const photoCatalog={
   jezero:{src:'assets/places/jezero.jpg',alt:'Rocky delta outcrops at Wildcat Ridge and Skinner Ridge in Jezero Crater',caption:'A real Perseverance panorama of the two sampling areas in Jezero’s delta. Colors enhanced by the mission team.',credit:nasaCredit,source:'https://science.nasa.gov/photojournal/2-perseverance-sampling-locations-in-jezeros-delta/'},
   wildcat:{src:'assets/places/wildcat.jpg',alt:'Wildcat Ridge with sample drill holes and an abrasion patch',caption:'Wildcat Ridge, photographed by Perseverance. Drill holes and a prepared abrasion patch mark the sampling workspace.',credit:nasaCredit,source:'https://www.jpl.nasa.gov/images/pia24928-sample-collection-and-rock-analysis-at-wildcat-ridge/'},
@@ -29,5 +30,7 @@ const photoCatalog={
 };
 export function placeFacts(sector,id){
   const info=factsFor(sector,id);if(!info)return null;
-  return {...info,photos:[sector==='gale'?photoCatalog.gale:photoCatalog[id]||photoCatalog.jezero]};
+  const photoId=sector==='gale'?'gale':Object.hasOwn(photoCatalog,id)?id:'jezero';
+  const [width,height]=photoDimensions[photoId];
+  return {...info,photos:[{...photoCatalog[photoId],width,height}]};
 }

@@ -153,6 +153,23 @@ test('settings only expose mission time and place facts include local photos',as
   assert.match(a.element('#dialog-content').innerHTML,/NASA\/JPL/);
 });
 
+test('place photos keep their own proportions and wide panoramas can be explored',async()=>{
+  const a=await app();
+  for(const [id,width,height] of [['base',1200,689],['wildcat',3225,2631],['skinner',1200,666]]){
+    a.showPlaceData(id);
+    const html=a.element('#dialog-content').innerHTML;
+    assert.match(html,new RegExp('width="'+width+'" height="'+height+'"'));
+    assert.doesNotMatch(html,/place-photo-panorama|loading="lazy"/);
+    assert.match(html,/Open full image/);
+  }
+  a.state.sector='gale';a.showPlaceData('wildcat');
+  const html=a.element('#dialog-content').innerHTML;
+  assert.match(html,/class="place-photo place-photo-panorama" tabindex="0" role="region"/);
+  assert.match(html,/width="1800" height="180"/);
+  assert.match(html,/scroll sideways to explore/);
+  assert.match(html,/<a href="assets\/places\/gale.jpg" target="_blank"/);
+});
+
 test('reporting extra equipment mid-edge preserves elapsed travel and requires reviewing a time-risk plan',async()=>{
   const a=await app();a.startWalk();a.advance(4000);
   const distance=a.state.traveledM,elapsed=a.elapsedNow(),position=[...a.state.progress.position];
