@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#161718" />
+  <meta name="description" content="Mars Scouts: route planning, explorer activity and walk tracking on Mars." />
+  <title>Mars Scouts — Every step, a way home</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%23171918'/%3E%3Cpath d='M12 44 28 17l10 17 7-11 9 21' fill='none' stroke='%23ed9b6d' stroke-width='5'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+  <script type="module" src="app.js"></script>
+</head>
+<body data-zone="jezero">
+  <svg class="icon-library" aria-hidden="true"><defs>
+    <symbol id="i-orbit" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><ellipse cx="12" cy="12" rx="11" ry="4" transform="rotate(-35 12 12)"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2V5Zm6-2v16m6-14v16"/></symbol>
+    <symbol id="i-route" viewBox="0 0 24 24"><circle cx="5" cy="5" r="2"/><circle cx="19" cy="19" r="2"/><path d="M7 5h10a4 4 0 0 1 0 8H7a3 3 0 0 0 0 6h10"/></symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 10 5-10 5L2 8l10-5ZM2 12l10 5 10-5M2 16l10 5 10-5"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 3h15v18H5a3 3 0 0 1 0-6h15M5 3a3 3 0 0 0-3 3v12M7 7h8m-8 4h5"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="8" cy="7" r="3"/><circle cx="16" cy="17" r="3"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 2 8 3v7c0 5-8 10-8 10S4 17 4 12V5l8-3Z"/><path d="m8 11 3 3 5-5"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 12 8-12 8V4Z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="m11 4-6 5H2v6h3l6 5V4Zm4 4a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-11v2"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 22V3c5-4 9 4 15 0v11c-6 4-10-4-15 0"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-mountain" viewBox="0 0 24 24"><path d="m2 20 8-16 5 9 3-5 5 12H2Zm5-10 3 3 3-3"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M19 10c0 6-7 12-7 12S5 16 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/><path d="M3 12h4l2-4 4 8 2-4h6"/></symbol>
+    <symbol id="i-warning" viewBox="0 0 24 24"><path d="m12 3 10 18H2L12 3ZM12 9v5m0 3v1"/></symbol>
+  </defs></svg>
+  <a href="#main-content" class="skip-link">Skip to my walk</a>
+  <div class="app-shell">
+    <header class="topbar">
+      <a href="#" class="wordmark">MARS<span>SCOUTS</span><span class="brand-tag">SURFACE OPERATIONS</span></a>
+      <nav class="top-nav" aria-label="Walk tools"><button data-action="log"><svg><use href="#i-book"/></svg> My history <span id="log-dot" class="notification-dot" hidden></span></button><button data-action="profiles"><svg><use href="#i-orbit"/></svg> Team <span id="profile-count">1</span></button><button data-action="settings"><svg><use href="#i-settings"/></svg> Settings</button></nav>
+      <div class="top-status"><span class="status-dot"></span> Operations · EVA–01</div>
+    </header>
+    <main id="main-content">
+      <section class="page-intro">
+        <div><div class="eyebrow"><span class="tiny-line"></span> SURFACE EXPLORATION</div><h1>Your route on Mars</h1><p>Choose your area. Plan your route. Explore.</p></div>
+        <button class="destination-switch" data-action="globe" aria-label="Change exploration area"><div class="mini-planet" aria-hidden="true"></div><div><span class="eyebrow">EXPLORATION AREA</span><strong id="destination-name">Jezero Crater</strong><span id="destination-coords" class="mono">18.44° N · 77.45° E</span><span class="destination-cta">Change area <span aria-hidden="true">↗</span></span></div></button>
+      </section>
+      <section class="profile-toolbar" aria-label="Active profile"><button class="active-profile" data-action="profiles"><span class="profile-mark"><svg aria-hidden="true"><use href="#i-orbit"/></svg></span><span><strong id="active-profile-name">Explorer 01</strong><small id="active-profile-code">EVA-01 · Astronaut</small></span><span aria-hidden="true">⌄</span></button><div id="profile-tracks" class="profile-tracks" aria-label="Profile track colors"></div><button class="text-button" data-action="profiles">Add / switch profile ↗</button></section>
+      <section class="mission-strip mission-overview" aria-label="Mission summary and local weather">
+        <div class="mission-label"><span class="mission-emblem"><svg><use href="#i-orbit"/></svg></span><div><span class="eyebrow">YOUR OBJECTIVE</span><strong id="mission-name">The delta contact</strong><span id="summary-context">Full plan estimate</span></div></div>
+        <div class="strip-stat"><span><svg><use href="#i-route"/></svg> Remaining distance</span><strong id="stat-distance">— <small>km</small></strong></div>
+        <div class="strip-stat"><span><svg><use href="#i-clock"/></svg> Estimated time</span><strong id="stat-duration">— <small>min</small></strong></div>
+        <div class="strip-stat reserve-stat"><span><svg><use href="#i-shield"/></svg> Return margin</span><strong id="stat-reserve">— <small>min</small></strong><span class="stat-help">After walking and observations.</span></div>
+        <div class="weather-bar" role="group" aria-label="Simulated local weather">
+          <div class="weather-temperature"><strong id="weather-temperature">— °C</strong><span id="weather-condition">Clear</span></div>
+          <div class="weather-details"><strong id="weather-wind">— m/s</strong><span id="weather-visibility">Good visibility</span></div>
+        </div>
+      </section>
+      <div id="alert-banner" class="alert-banner" hidden role="status"></div>
+      <section id="risk-alert" class="risk-alert" hidden role="alert" aria-label="Route alert"><span class="risk-icon"><span class="mini-planet alert-planet" aria-hidden="true"></span><svg><use href="#i-warning"/></svg></span><div><strong id="risk-title"></strong><p id="risk-message"></p></div><button class="outline-button" data-action="pause-risk">Pause and review</button><button class="icon-button" data-action="dismiss-risk" aria-label="Dismiss this alert"><svg><use href="#i-close"/></svg></button></section>
+      <section class="workspace">
+        <div class="map-column"><section class="route-summary-bar" aria-label="Selected route"><i id="route-swatch"></i><div><strong id="route-name">Compare your routes</strong><p id="route-summary">Choose your stops and compare the routes.</p></div><button id="route-choice-button" class="outline-button" data-action="routes">Compare routes</button></section>
+          <section class="map-card" aria-label="Planning map">
+            <div class="map-header"><div class="map-heading"><span class="live-square"></span><div><h2 id="map-title">Hawksbill Gap</h2><p>Layers, elevation and route</p></div></div><div class="map-header-actions"><button id="echo-button" class="echo-toggle" data-action="toggle-echo" aria-pressed="false" aria-controls="echo-panel">Return preview</button><div class="segmented" aria-label="Map view"><button class="active" data-map-view="terrain" aria-pressed="true">Terrain</button><button data-map-view="contours" aria-pressed="false">Elevation</button></div></div></div>
+            <div class="map-viewport" id="map-viewport">
+              <div class="map-surface" id="map-surface"><canvas id="terrain" width="1200" height="900" aria-hidden="true"></canvas><svg id="map-svg" viewBox="0 0 1000 750" aria-label="Corridors, base and observation stops" role="group"></svg></div>
+              <div class="map-location"><span class="status-dot"></span><span id="map-location-label">JEZERO · WESTERN DELTA</span><span class="mono">1.0 × 1.0 KM</span></div>
+              <div class="map-tools"><button data-action="zoom-in" aria-label="Zoom in" title="Zoom in">+</button><button data-action="zoom-out" aria-label="Zoom out" title="Zoom out">−</button><span></span><button data-action="center" aria-label="Center map" title="Center map">⌖</button></div>
+              <div class="compass"><span>N</span><svg viewBox="0 0 30 40"><path d="m15 3 9 27-9-5-9 5Z" fill="#efe5d5"/><path d="m15 3 0 22-9 5Z" fill="#928575"/></svg></div>
+              <div class="layer-popover" id="layer-popover" hidden><strong>Map layers</strong><label><input type="checkbox" data-layer="corridors" checked> Evaluated corridors</label><label><input type="checkbox" data-layer="reach" checked> Return range</label><label><input type="checkbox" data-layer="hazards" checked> Excluded areas</label><label><input type="checkbox" data-layer="labels" checked> Names and landmarks</label></div>
+              <button class="map-layer-button" data-action="layers"><svg><use href="#i-layers"/></svg> Layers <span id="layer-count">4</span></button>
+              <div class="scale"><div></div><span>200 m <span>approx.</span></span></div>
+              <div class="map-tooltip" id="map-tooltip" hidden></div>
+              <section class="echo-panel" id="echo-panel" hidden aria-labelledby="echo-heading">
+                <div class="echo-heading"><div><span>PLAN YOUR WAY HOME</span><h3 id="echo-heading">When should I turn back?</h3></div><button class="icon-button" data-action="toggle-echo" aria-label="Close return preview"><svg><use href="#i-close"/></svg></button></div>
+                <p class="echo-intro">Compare going home now with continuing first. Move the slider to see where you would turn back.</p><label class="echo-question" for="echo-slider">Continue for <output id="echo-horizon">5 min</output> before returning</label>
+                <input id="echo-slider" type="range" min="0" max="20" step="1" value="5" aria-describedby="echo-caption" />
+                <div class="echo-comparison"><div><span>1 ? Go home now</span><strong id="echo-now-time"></strong><small id="echo-now-reserve"></small></div><div><span>2 ? Continue, then return</span><strong id="echo-later-time"></strong><small id="echo-later-reserve"></small></div></div>
+                <p id="echo-status"></p><p id="echo-caption"></p>
+              </section>
+              <div class="navigation-cue" id="navigation-cue" hidden role="status"><span>ROUTE GUIDANCE</span><p id="navigation-message"></p></div>
+              <section id="reroute-notice" class="reroute-notice" role="alert" hidden><div><strong id="reroute-title"></strong><p id="reroute-message"></p><span id="deviation-distance" aria-live="off"></span><button id="return-to-route-button" class="outline-button" data-action="return-to-route" hidden>Return to your route</button></div><button id="dismiss-deviation-button" class="icon-button" data-action="dismiss-deviation" aria-label="Dismiss rerouting notice"><svg><use href="#i-close"/></svg></button></section>
+            </div>
+            <div class="map-footer"><div class="map-legend"><span><i class="legend-you"></i> You</span><span><i class="legend-line"></i> Your route</span><span><i class="legend-dot"></i> Return within margin</span><span><i class="legend-hazard"></i> Caution</span></div><div class="map-explanation-actions"><button class="text-button" data-action="coverage"><svg><use href="#i-info"/></svg> What does the map show?</button><button id="deviation-button" class="deviation-demo" data-action="simulate-deviation" title="Watch the astronaut leave the route, then follow an alternative or turn back" disabled>Simulate leaving the route ↗</button></div></div>
+          </section>
+        </div>
+        <aside class="mission-panel">
+          <section class="walk-controls" aria-label="Walk controls"><section class="walk-status" aria-label="Current walk status"><span class="status-indicator" id="walk-state">Preparing your walk</span><div><strong id="next-action">Next: review your status and stops.</strong><p id="walk-position">You are at Ares Base. The walk has not started yet.</p></div><span id="elapsed-time" class="elapsed-time">0 min elapsed</span></section><button class="primary-button" id="start-button" data-action="start"><svg><use href="#i-play"/></svg><span>Start walk</span></button><div class="reserve-box"><div class="reserve-icon"><svg><use href="#i-shield"/></svg></div><div><strong id="reserve-title">Your return is included</strong><span id="reserve-description">A minimum 20 min reserve is protected.</span></div><svg class="reserve-check"><use href="#i-check"/></svg></div></section>
+          <details class="elevation-card" open><summary><span><svg><use href="#i-mountain"/></svg> Route elevation</span><svg><use href="#i-chevron"/></svg></summary><div class="secondary-content"><span id="elevation-range" class="mono">Route elevation</span><p>The line rises where the terrain takes more effort.</p><svg id="elevation-svg" viewBox="0 0 800 94" preserveAspectRatio="none" aria-label="Illustrative route elevation profile"></svg><div id="elevation-live" class="elevation-live" aria-live="off"></div><div class="elevation-axis"><span>Departure</span><span id="profile-label">Wildcat Ridge</span><span>Return</span></div></div></details>
+          <details class="copilot-card"><summary><span>Return and alerts</span><svg><use href="#i-chevron"/></svg></summary><div class="route-details"><p id="copilot-message" aria-live="polite">Review the stops and return margin before departure.</p><div id="decision-actions" class="decision-actions" hidden><button class="primary-button" data-action="accept">Yes, accept this route</button><button class="outline-button" data-action="reject">Review first</button></div><div class="voice-controls"><button class="voice-toggle" id="voice-toggle" data-action="toggle-voice" aria-pressed="true"><svg><use href="#i-sound"/></svg><span id="voice-toggle-label">Voice alerts on</span><span class="toggle-track" aria-hidden="true"></span></button><span id="voice-status" role="status">Voice alerts play when you approach a hazard.</span></div><div class="copilot-links"><button class="text-button" data-action="speak">Listen to explanation <svg><use href="#i-sound"/></svg></button><button class="text-button" data-action="why">Explain my return <svg><use href="#i-arrow"/></svg></button></div></div></details>
+          <section class="health-card" aria-labelledby="health-heading">
+          <div class="health-heading"><div><h2 id="health-heading">Explorer status</h2><p>Crew member 01 · EVA activity</p></div></div>
+          <div class="health-model-line"><span class="health-status" id="health-status">Standing by</span></div>
+          <div class="extra-load-row"><div><span>Extra equipment</span><strong id="extra-load-value">0 kg</strong><small>In addition to your suit</small></div><button id="extra-load-button" class="outline-button" data-action="load">Report load</button></div><p id="load-warning" class="load-warning" role="status" hidden></p>
+          <div class="health-readings"><div><span>Heart rate</span><strong id="health-pulse">74 <small>bpm</small></strong><svg class="pulse-line" viewBox="0 0 130 30" aria-label="Heart rate trend"><polyline id="pulse-trace" points="0,22 130,22"/></svg></div><div><span>Respiration</span><strong id="health-respiration">14 <small>breaths/min</small></strong><span class="reading-note">Breaths per minute</span></div><div><span>Oxygen saturation · SpO₂</span><strong id="health-spo2">98.1 <small>%</small></strong><span class="reading-note">Blood oxygen saturation</span></div><div><span>Relative effort</span><strong id="health-effort">0 <small>%</small></strong><div class="effort-track"><span id="effort-fill"></span></div></div></div>
+          <div class="mobility-row"><span>Walking pace</span><strong id="health-mobility">45 m/min</strong></div>
+          <div class="wellbeing-actions"><button data-action="feel-good" id="feel-good" aria-pressed="true">Normal pace</button><button data-action="rest" id="rest-button" aria-pressed="false">Rest for 2 min</button></div>
+          <p class="health-feedback" id="health-feedback" aria-live="polite">Workload rises when walking uphill and falls during rest.</p>
+          <div class="health-sources" aria-label="EVA activity sources"><a href="https://ntrs.nasa.gov/citations/20240001423" target="_blank" rel="noreferrer">EVA workload &#8599;</a><a href="https://ntrs.nasa.gov/citations/20210024317" target="_blank" rel="noreferrer">EVA heart rate &#8599;</a></div>
+        </section>
+
+          <details class="itinerary-card"><summary><span>Walk stops</span><svg><use href="#i-chevron"/></svg></summary><div class="itinerary-content"><p class="panel-description">Leave base, visit your chosen stops and return. Observation time is already included.</p>
+            <div class="itinerary" id="itinerary"></div>
+            <button class="add-stop" data-action="destinations"><span>+</span> Edit walk stops</button>
+            <div class="simulation-note"><span class="status-dot"></span> Walk tracking · EVA–01</div>
+          </div></details>
+          <div class="crew-footer"><div class="crew-avatars" role="group" aria-label="Switch astronaut profile"></div><div><strong>Your surface team.</strong><span>1 astronaut registered</span></div></div>
+        </aside>
+      </section>
+      <section class="secondary-grid" aria-label="Walk details">
+          <details class="mission-controls"><summary><span id="conditions-heading">Adjust my walk</span><span class="conditions-status" id="conditions-status">Normal route</span><svg><use href="#i-chevron"/></svg></summary><div class="secondary-content"><p id="conditions-help">If you need a slower pace or visibility is poor, adjust an option. The walk will pause so you can review the new route before continuing.</p><div class="condition-actions"><button data-action="simulate" aria-describedby="event-help"><svg><use href="#i-route"/></svg><span class="condition-copy"><strong id="event-label">Walk more slowly</strong><small id="event-help">Calculate the return at a slower walking pace.</small></span><span class="condition-arrow" aria-hidden="true">↗</span></button><button data-action="dust" id="visibility-button" aria-pressed="false" aria-describedby="visibility-help"><svg><use href="#i-mountain"/></svg><span class="condition-copy"><strong id="visibility-label">Visibility is poor</strong><small id="visibility-help">Exclude observations that require a clear distant view.</small></span><span class="condition-arrow" aria-hidden="true">↗</span></button><button data-action="reset" aria-describedby="reset-help"><svg><use href="#i-flag"/></svg><span class="condition-copy"><strong>Start over</strong><small id="reset-help">Return to Ares Base. Your history is kept.</small></span><span class="condition-arrow" aria-hidden="true">↻</span></button></div></div></details>
+      </section>
+      <footer class="page-footer"><span><span class="footer-mark">✳</span> MARS SCOUTS · Surface operations</span><span>2026</span></footer>
+    </main>
+  </div>
+  <dialog id="main-dialog"><button class="dialog-close icon-button" data-action="close-dialog" aria-label="Close"><svg><use href="#i-close"/></svg></button><div id="dialog-content"></div></dialog>
+  <div class="toast" id="toast" role="status" hidden></div>
+</body>
+</html>
