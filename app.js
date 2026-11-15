@@ -272,6 +272,7 @@ function teamMapLayer(){
   return out;
 }
 function toggleEcho(){state.echoEnabled=!state.echoEnabled;if(state.echoEnabled){$('#map-tooltip').hidden=true;$('#layer-popover').hidden=true;}renderEcho(true);}
+function placeTitle(id){return id==='base'?'Ares Base':sectors[state.sector].stops[id]?.name||({junction:'Corridor junction',crossing:'Corridor crossing',south:'Southern corridor',ridge:'Ridge corridor'}[id]||'Waypoint');}
 function showNode(id){
   if(state.echoEnabled){state.echoEnabled=false;renderEcho(true);}
   const sector=sectors[state.sector],data=sector.stops[id],reachable=result.reachable.includes(id),n=nodeById(id);
@@ -282,7 +283,7 @@ function showNode(id){
 function showPlaceData(id){
   const n=nodeById(id),sector=sectors[state.sector],info=placeFacts(state.sector,id);if(!n||!info)return;
   if(state.running){pause();record('Walk paused','Viewing place facts.');update();}
-  const stop=sector.stops[id],name=id==='base'?'Ares Base':stop?.name||'Waypoint';
+  const stop=sector.stops[id],name=placeTitle(id);
   openDialog(heading('DISCOVER MARS',name,info.scope)+placeGallery(info)+`<div class="place-mission"><span>ON YOUR WALK</span><strong>+${n.z} m relative elevation${stop?' · '+stop.duration+' min of observation':''}</strong><p>${stop?.method||'A connecting waypoint and landmark for your walk.'}</p></div><div class="place-facts">${info.facts.map(fact=>`<article class="place-fact"><span>DID YOU KNOW…?</span><h3>${fact.title}</h3><p>${fact.text}</p><a href="${fact.source}" target="_blank" rel="noreferrer">Read the story at NASA ↗</a></article>`).join('')}</div>`);
 }
 function renderElevation(){
@@ -598,9 +599,9 @@ function showRestFeedback(){
 }
 function placeGallery(info){
   return '<div class="place-gallery">'+(info.photos||[]).map(photo=>{
-    const panoramic=photo.width/photo.height>3;
-    return '<figure><div class="place-photo'+(panoramic?' place-photo-panorama':'')+'"'+(panoramic?' tabindex="0" role="region" aria-label="Panorama. Scroll horizontally to explore the landscape."':'')+'><img src="'+photo.src+'" alt="'+escapeHTML(photo.alt)+'" width="'+photo.width+'" height="'+photo.height+'"></div>'+
-      '<div class="place-photo-tools">'+(panoramic?'<span>Panorama · scroll sideways to explore</span>':'')+'<a href="'+photo.src+'" target="_blank" rel="noopener noreferrer">Open full image ↗</a></div>'+
+    const crop=photo.crop,frameStyle='aspect-ratio:'+crop.width+'/'+crop.height+';--photo-width:'+(100*photo.width/crop.width).toFixed(4)+'%;--photo-left:'+(-100*crop.x/crop.width).toFixed(4)+'%;--photo-top:'+(-100*crop.y/crop.height).toFixed(4)+'%';
+    return '<figure><a class="place-photo" href="'+photo.src+'" target="_blank" rel="noopener noreferrer" style="'+frameStyle+'" aria-label="Open original image: '+escapeHTML(photo.alt)+'"><img src="'+photo.src+'" alt="'+escapeHTML(photo.alt)+'" width="'+photo.width+'" height="'+photo.height+'"></a>'+
+      '<div class="place-photo-tools"><span>Landscape detail</span><a href="'+photo.src+'" target="_blank" rel="noopener noreferrer">View original photo ↗</a></div>'+
       '<figcaption>'+photo.caption+' <a href="'+photo.source+'" target="_blank" rel="noreferrer">'+photo.credit+' ↗</a></figcaption></figure>';
   }).join('')+'</div>';
 }

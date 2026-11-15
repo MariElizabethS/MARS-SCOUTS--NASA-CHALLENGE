@@ -153,21 +153,45 @@ test('settings only expose mission time and place facts include local photos',as
   assert.match(a.element('#dialog-content').innerHTML,/NASA\/JPL/);
 });
 
-test('place photos keep their own proportions and wide panoramas can be explored',async()=>{
+test('place photos frame the landscape and link to their complete local originals',async()=>{
   const a=await app();
-  for(const [id,width,height] of [['base',1200,689],['wildcat',3225,2631],['skinner',1200,666]]){
+  for(const [id,width,height] of [['base',2400,1378],['wildcat',3225,2631],['skinner',2400,1331]]){
     a.showPlaceData(id);
     const html=a.element('#dialog-content').innerHTML;
     assert.match(html,new RegExp('width="'+width+'" height="'+height+'"'));
     assert.doesNotMatch(html,/place-photo-panorama|loading="lazy"/);
-    assert.match(html,/Open full image/);
+    assert.match(html,/View original photo/);
+    assert.match(html,/style="aspect-ratio:[\d]+\/[\d]+;--photo-width:/);
   }
-  a.state.sector='gale';a.showPlaceData('wildcat');
+  a.state.sector='gale';a.showPlaceData('base');
   const html=a.element('#dialog-content').innerHTML;
-  assert.match(html,/class="place-photo place-photo-panorama" tabindex="0" role="region"/);
-  assert.match(html,/width="1800" height="180"/);
-  assert.match(html,/scroll sideways to explore/);
+  assert.match(html,/width="2400" height="900"/);
+  assert.doesNotMatch(html,/place-photo-panorama|scroll sideways/);
+  assert.match(html,/Peace Vallis/);
+  assert.match(html,/<a class="place-photo" href="assets\/places\/gale.jpg"/);
   assert.match(html,/<a href="assets\/places\/gale.jpg" target="_blank"/);
+});
+
+test('each Gale observation shows its own photo and switching areas restores Jezero photos',async()=>{
+  const a=await app(),sources=[];
+  a.state.sector='gale';
+  for(const [id,file,width,height] of [['wildcat','gale-hollow',1632,1200],['skinner','gale-ridge',2400,1973],['lookout','gale-lookout',4000,747]]){
+    a.showPlaceData(id);
+    const html=a.element('#dialog-content').innerHTML;
+    const src=html.match(/<img src="([^"]+)"/)[1];
+    assert.equal(src,'assets/places/'+file+'.jpg');
+    assert.match(html,new RegExp('width="'+width+'" height="'+height+'"'));
+    assert.doesNotMatch(html,/<img src="assets\/places\/(gale|wildcat|skinner)\.jpg"/);
+    sources.push(src);
+  }
+  assert.equal(new Set(sources).size,3);
+  a.showPlaceData('junction');
+  assert.match(a.element('#dialog-content').innerHTML,/<img src="assets\/places\/gale-junction.jpg"/);
+  a.state.sector='jezero';
+  for(const id of ['wildcat','skinner']){
+    a.showPlaceData(id);
+    assert.equal(a.element('#dialog-content').innerHTML.match(/<img src="([^"]+)"/)[1],'assets/places/'+id+'.jpg');
+  }
 });
 
 test('reporting extra equipment mid-edge preserves elapsed travel and requires reviewing a time-risk plan',async()=>{

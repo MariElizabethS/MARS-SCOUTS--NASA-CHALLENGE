@@ -4,6 +4,8 @@ import {once} from 'node:events';
 import {spawn} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {createStaticServer} from '../server.mjs';
+import {nodes,sectors} from '../engine.mjs';
+import {placeFacts} from '../places.mjs';
 
 test('the English page, stylesheet and entire module graph load over HTTP', async t => {
   const server = createStaticServer();
@@ -34,8 +36,10 @@ test('the English page, stylesheet and entire module graph load over HTTP', asyn
     for (const match of source.matchAll(/from\s+['"]([^'"]+)['"]/g)) pending.push(new URL(match[1], url).href);
   }
   assert.ok(seen.size >= 9);
-  for(const photo of ['wildcat','skinner','jezero','gale']){
-    const image=await fetch(base+'/assets/places/'+photo+'.jpg');
+  const photoPaths=Object.keys(sectors).flatMap(sector=>nodes.map(node=>placeFacts(sector,node.id).photos[0].src));
+  assert.equal(new Set(photoPaths).size,16);
+  for(const photoPath of photoPaths){
+    const image=await fetch(new URL(photoPath,base));
     assert.equal(image.status,200);
     assert.match(image.headers.get('content-type'),/image\/jpeg/);
     const bytes=new Uint8Array(await image.arrayBuffer());
