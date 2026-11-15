@@ -71,6 +71,10 @@ flowchart LR
 | --- | --- | --- |
 | Consulta fotografías reales, datos educativos y enlaces a sus fuentes. Cada punto tiene su propia imagen. | Cambia entre hasta 12 astronautas locales, cada uno con su recorrido y progreso independientes. | Revisa decisiones, cambios de ruta y eventos. Exporta el historial en un PDF generado en el navegador. |
 
+## Diapoitivas de proyecto 
+
+https://drive.google.com/file/d/16WVrpyn9YV5GnwzBra0sZvTCsbH17ZCD/view?usp=sharing 
+
 ### Dos escenarios para explorar
 
 | Jezero Crater | Gale Crater |
@@ -80,40 +84,7 @@ flowchart LR
 | Un cambio de movilidad permite revisar el regreso a un ritmo más lento. | Un cierre de acceso permite buscar un recorrido que evite la cresta. |
 
 Las fichas distinguen las fotografías de lugares reales de las referencias visuales utilizadas para puntos simulados. Puedes abrir cada foto original y consultar sus créditos.
-
-## Inicio rápido
-
-**Requisitos:** Node.js **20 o superior** y un navegador web. La app se ejecuta sin dependencias externas de producción ni un paso de compilación.
-
-1. Abre una terminal en la carpeta del proyecto.
-2. Inicia el servidor:
-
-   ```powershell
-   npm.cmd run dev
-   ```
-
-3. Abre **[http://localhost:3000](http://localhost:3000)**.
-
-En Windows también puedes hacer doble clic en **[start.cmd](start.cmd)**. Mantén la terminal abierta mientras usas la app y presiona **Ctrl+C** para detener el servidor.
-
-<details>
-<summary>Otras formas de iniciar</summary>
-
-En macOS, Linux o una terminal compatible:
-
-```bash
-npm run dev
-```
-
-También puedes iniciar directamente con Node.js:
-
-```bash
-node server.mjs
-```
-
-Abre la dirección HTTP indicada por el servidor para que los módulos de JavaScript se carguen correctamente.
-
-</details>
+ 
 
 ## Guía de uso
 
